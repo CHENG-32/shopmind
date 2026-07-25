@@ -19,7 +19,7 @@ logger = logging.getLogger("shopmind")
 
 app = FastAPI(
     title="掌柜参谋 ShopMind",
-    description="基于 InfiniSynapse 的小微商家泛数据分析应用 · Vibe Coding 参赛作品",
+    description="基于 InfiniSynapse 的小微商家经营数据分析应用",
     version="1.0.0",
 )
 
@@ -92,7 +92,7 @@ def api_briefing():
 
 @app.get("/api/integration")
 def api_integration():
-    """提交材料用：InfiniSynapse 集成说明（可机器读）。"""
+    """InfiniSynapse 集成状态与资源清单。"""
     s = get_settings()
     client = InfiniSynapseClient(s.infinisynapse_api_key, s.infinisynapse_base_url)
     try:
@@ -105,7 +105,6 @@ def api_integration():
         err = str(e)
     return {
         "product": "掌柜参谋 ShopMind",
-        "contest": "InfiniSynapse × CSDN Vibe Coding 泛数据分析应用开发大赛",
         "integration": {
             "auth": "Authorization: Bearer <INFINISYNAPSE_API_KEY>（仅服务端）",
             "base_url": s.infinisynapse_base_url,
@@ -137,7 +136,7 @@ def api_ask(body: AskRequest):
     briefing = build_briefing(data)
     local_md = briefing["markdown"]
 
-    # 本地兜底答复（保证评委弱网也能用）
+    # 本地兜底答复
     local_answer = _local_answer(body.question, briefing)
 
     if not body.use_infini:
@@ -202,7 +201,7 @@ def api_ask(body: AskRequest):
         ok=True,
         source="local_fallback",
         answer=local_answer
-        + "\n\n> InfiniSynapse 未在时限内返回完整结论，已展示本地经营引擎结果。评委可在平台任务日志中核验 API 调用。",
+        + "\n\n> InfiniSynapse 未在时限内返回完整结论，已展示本地经营引擎结果。可在 InfiniSynapse 平台任务日志中核验 API 调用。",
         local_brief=local_md,
         task_id=result.get("task_id"),
         elapsed_sec=result.get("elapsed_sec"),

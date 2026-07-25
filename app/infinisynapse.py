@@ -1,6 +1,6 @@
 """InfiniSynapse Server API 客户端。
 
-对接文档（Vibe Coding Guide / Server API Reference）：
+对接 InfiniSynapse Server API：
 - Base: https://app.infinisynapse.cn/api
 - Auth: Authorization: Bearer <API Key>
 - 主流程: SSE /ai/events + POST /ai/message (newTask)
