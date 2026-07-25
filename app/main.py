@@ -118,15 +118,33 @@ def api_integration():
             ],
             "code_entry": "app/infinisynapse.py :: InfiniSynapseClient.run_analysis",
         },
-        "resources": ctx,
+        "resources": {
+            "databases": [
+                {
+                    "name": d.get("name"),
+                    "nickname": d.get("nickname"),
+                    "type": d.get("type"),
+                    "enabled": d.get("enabled"),
+                }
+                for d in (ctx.get("databases") or [])
+            ],
+            "rags": [
+                {
+                    "name": r.get("name"),
+                    "nickname": r.get("nickname"),
+                    "enabled": r.get("enabled"),
+                }
+                for r in (ctx.get("rags") or [])
+            ],
+        },
         "status": status,
         "error": err,
-        "demo_data": {
-            "orders": str(DATA_DIR / "orders.csv"),
-            "inventory": str(DATA_DIR / "inventory.csv"),
-            "daily_summary": str(DATA_DIR / "daily_summary.csv"),
-            "knowledge_base": str(DATA_DIR / "knowledge_base.md"),
-        },
+        "demo_data": [
+            "orders.csv",
+            "inventory.csv",
+            "daily_summary.csv",
+            "knowledge_base.md",
+        ],
     }
 
 

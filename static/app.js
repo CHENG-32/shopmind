@@ -150,8 +150,8 @@ async function ask(question) {
   addBubble("user", q);
   const btn = $("#askBtn");
   btn.disabled = true;
-  btn.textContent = useInfini ? "Agent 分析中…" : "分析中…";
-  addBubble("bot", useInfini ? "正在通过 InfiniSynapse 创建分析任务并上传经营数据，请稍候（可能需要 30～120 秒）…" : "本地经营引擎计算中…");
+  btn.textContent = useInfini ? "深度分析中…" : "分析中…";
+  addBubble("bot", useInfini ? "正在结合经营数据做深度分析，通常需要约 30～120 秒…" : "正在计算经营指标…");
 
   try {
     const r = await fetch("/api/ask", {
@@ -165,13 +165,17 @@ async function ask(question) {
     if (log.lastChild && log.lastChild.classList.contains("bot")) {
       log.removeChild(log.lastChild);
     }
+    const sourceLabel = {
+      infinisynapse: "深度分析",
+      local: "本地分析",
+      local_fallback: "本地分析（回退）",
+    }[j.source] || j.source;
     const meta = [
-      `来源: ${j.source}`,
-      j.task_id ? `taskId: ${j.task_id}` : null,
+      sourceLabel,
       j.elapsed_sec != null ? `${j.elapsed_sec}s` : null,
     ].filter(Boolean).join(" · ");
     addBubble("bot", j.answer || j.error || "无结果", meta);
-    if (j.source === "infinisynapse") toast("InfiniSynapse 分析完成");
+    if (j.source === "infinisynapse") toast("深度分析完成");
   } catch (e) {
     addBubble("bot", "请求失败：" + e.message);
   } finally {
@@ -202,7 +206,7 @@ async function boot() {
 
   addBubble(
     "bot",
-    "你好，我是掌柜参谋。左侧可查看异常与行动，右侧可直接用自然语言提问；点「查看证据链」可核对每条结论的数据依据。"
+    "你好，我是掌柜参谋。先看左侧异常与行动，需要时点「查看证据链」核对数据；也可以直接问我经营问题。"
   );
 }
 
