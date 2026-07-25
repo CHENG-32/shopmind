@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+  <title>掌柜参谋 ShopMind · 基于 InfiniSynapse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">掌</div>
+      <div>
+        <div class="brand-name">掌柜参谋 <span>ShopMind</span></div>
+        <div class="brand-sub">小微经营 · 泛数据分析 · InfiniSynapse</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="healthPill" class="pill">检测中…</span>
+      <a class="link" href="/api/integration" target="_blank">系统状态</a>
+      <a class="link" href="https://infinisynapse.cn" target="_blank" rel="noopener">Powered by InfiniSynapse</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="hero card">
+      <div>
+        <div class="eyebrow">小微经营数据分析</div>
+        <h1>不会 Excel / SQL，也能看懂店里的账</h1>
+        <p class="lead">
+          连接订单、库存与业务知识库，自动生成<strong>经营日报</strong>、<strong>异常哨兵</strong>与<strong>可执行行动</strong>。
+          支持自然语言追问，每条洞察附带数据证据链，帮你从「看出问题」走到「今天做什么」。
+        </p>
+        <div class="hero-steps">
+          <div><b>1</b>看清今日经营</div>
+          <div><b>2</b>锁定异常与证据</div>
+          <div><b>3</b>问一句，拿行动</div>
+        </div>
+      </div>
+      <div class="hero-meta" id="dataMeta">加载数据中…</div>
+    </section>
+
+    <section class="kpis" id="kpiRow"></section>
+
+    <section class="grid-2">
+      <div class="card">
+        <div class="card-hd">
+          <h2>经营趋势（近 30 日 GMV）</h2>
+          <span class="muted" id="periodLabel"></span>
+        </div>
+        <div class="chart" id="trendChart"></div>
+        <div class="mini-grid">
+          <div>
+            <h3>Top SKU</h3>
+            <ul id="topSkuList" class="list"></ul>
+          </div>
+          <div>
+            <h3>门店 / 渠道</h3>
+            <ul id="storeList" class="list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <h2>异常哨兵</h2>
+          <span class="muted">销量 · 库存 · 优惠 · 退款</span>
+        </div>
+        <div id="sentinelList" class="sentinel-list"></div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card">
+        <div class="card-hd">
+          <h2>今日行动清单</h2>
+          <span class="muted">从异常到动作</span>
+        </div>
+        <div id="actionList" class="action-list"></div>
+      </div>
+
+      <div class="card chat-card">
+        <div class="card-hd">
+          <h2>问掌柜参谋</h2>
+          <label class="toggle">
+            <input type="checkbox" id="useInfini" checked />
+            <span>深度分析（InfiniSynapse）</span>
+          </label>
+        </div>
+        <div class="chips" id="chipRow">
+          <button type="button" data-q="最近一周哪个品类下滑最明显？主要是哪家店？">品类下滑</button>
+          <button type="button" data-q="哪些 SKU 有断货风险？今天该补什么货？">断货风险</button>
+          <button type="button" data-q="给我 3 条今天就能执行的提升毛利行动，并说明依据。">行动建议</button>
+          <button type="button" data-q="万达店杨枝甘露最近怎么了？结合渠道和会员看一下。">单店深挖</button>
+        </div>
+        <div id="chatLog" class="chat-log"></div>
+        <form id="askForm" class="ask-form">
+          <input id="askInput" type="text" placeholder="例如：分析近一周销售，找出下滑最明显的品类…" autocomplete="off" required />
+          <button type="submit" id="askBtn">分析</button>
+        </form>
+        <p class="hint">开启「深度分析」时，将结合经营数据由 InfiniSynapse 作答；关闭则使用本地经营引擎即时回答。</p>
+      </div>
+    </section>
+
+    <section class="card evidence-card" id="evidencePanel" hidden>
+      <div class="card-hd">
+        <h2>证据链</h2>
+        <button type="button" class="linkish" id="closeEvidence">关闭</button>
+      </div>
+      <pre id="evidenceBody"></pre>
+    </section>
+
+    <footer class="footer">
+      <div>
+        <strong>掌柜参谋 ShopMind</strong> · 小微餐饮 / 零售经营分析 ·
+        数据分析引擎接入 InfiniSynapse
+      </div>
+      <div class="muted">当前示例数据为虚构品牌「星野手作茶」三门店近 90 天经营数据，可替换为你的真实门店表格。</div>
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
