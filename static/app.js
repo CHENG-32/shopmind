@@ -246,10 +246,10 @@ function setBusy(busy, deep = false) {
 }
 
 function startThinkingOverlay() {
-  const overlay = $("#thinkingOverlay");
-  if (!overlay) return;
-  // Only show during an explicit deep-analysis request — never on page load.
-  overlay.hidden = false;
+  // Progress stays inside the assistant column — never a full-page modal on entry.
+  const panel = $("#thinkingInline");
+  if (!panel) return;
+  panel.hidden = false;
   const steps = [...$("#thinkingSteps").querySelectorAll("li")];
   steps.forEach((li, i) => {
     li.classList.toggle("active", i === 0);
@@ -258,10 +258,11 @@ function startThinkingOverlay() {
   $("#thinkingTitle").textContent = "正在深度分析";
   $("#thinkingDesc").textContent = "连接 InfiniSynapse · 准备经营数据";
   const bar = $("#thinkingBar");
-  bar.style.animation = "none";
-  // restart animation
-  void bar.offsetWidth;
-  bar.style.animation = "progressMove 1.2s ease-in-out infinite, progressGrow 12s linear forwards";
+  if (bar) {
+    bar.style.animation = "none";
+    void bar.offsetWidth;
+    bar.style.animation = "progressMove 1.2s ease-in-out infinite, progressGrow 12s linear forwards";
+  }
 
   let idx = 0;
   const descs = [
@@ -283,12 +284,15 @@ function startThinkingOverlay() {
       $("#thinkingDesc").textContent = descs[idx] || "分析进行中…";
     }
   }, 2200);
+  // Keep the progress in view inside the chat column
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function stopThinkingOverlay() {
   clearInterval(state.stepTimer);
   state.stepTimer = null;
-  $("#thinkingOverlay").hidden = true;
+  const panel = $("#thinkingInline");
+  if (panel) panel.hidden = true;
 }
 
 async function ask(question) {
@@ -359,8 +363,10 @@ async function boot() {
 
   addBubble(
     "bot",
-    "你好，我是掌柜参谋。\n左侧可看经营异常与今日行动；点「查看证据链」核对数据依据，点「追问 AI」我会在这里直接回答，无需翻到页面底部。"
+    "你好，我是掌柜参谋。\n左侧可看经营异常与今日行动；点「查看证据链」核对数据依据。\n默认是本地即时分析；需要更深度的结论时，再勾选「InfiniSynapse 深度分析」后提问——进度会出现在本对话区，不会挡住整页。"
   );
+  // Safety: never leave analysis progress visible after cold load / refresh.
+  stopThinkingOverlay();
 }
 
 /* Events */

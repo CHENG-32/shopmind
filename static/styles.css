@@ -34,6 +34,12 @@ body {
 
 button, input, textarea { font: inherit; }
 a { color: inherit; }
+
+/* Hard guarantee: HTML hidden must always hide, even if a component sets display. */
+[hidden] {
+  display: none !important;
+}
+
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
@@ -591,71 +597,71 @@ code {
 }
 .drawer .icon-btn { background: rgba(255,255,255,0.06); border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
 
-/* Thinking overlay
-   Important: never set display:grid on the base class alone —
-   it overrides the HTML `hidden` attribute and shows the modal on first paint. */
-.thinking-overlay {
-  position: fixed; inset: 0; z-index: 70;
-  background: rgba(15, 23, 42, 0.42);
-  backdrop-filter: blur(4px);
+/* Deep-analysis progress lives in the chat column only.
+   Never use a full-page overlay on first paint — that blocked the dashboard. */
+.thinking-inline {
   display: none;
-  place-items: center;
-  padding: 20px;
+  margin: 0 0 10px;
+  padding: 12px 12px 10px;
+  border-radius: 16px;
+  border: 1px solid #bfdbfe;
+  background: linear-gradient(180deg, #eff6ff 0%, #fff 70%);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.08);
+  animation: popIn .2s ease;
 }
-.thinking-overlay:not([hidden]) {
-  display: grid;
-}
-.thinking-card {
-  width: min(420px, 100%);
-  background: #fff;
-  border-radius: 22px;
-  padding: 22px 20px 18px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
-  text-align: center;
-  animation: popIn .22s ease;
+.thinking-inline:not([hidden]) {
+  display: block;
 }
 @keyframes popIn {
-  from { transform: translateY(10px) scale(.98); opacity: 0; }
+  from { transform: translateY(6px); opacity: 0; }
   to { transform: none; opacity: 1; }
 }
-.orbit {
-  width: 64px; height: 64px; margin: 0 auto 12px; position: relative;
+.thinking-inline-hd {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
 }
+.thinking-inline-hd h3 {
+  margin: 0 0 2px; font-size: 14px; color: #1e3a8a;
+}
+.thinking-inline-hd p {
+  margin: 0; font-size: 12px; color: var(--muted); line-height: 1.4;
+}
+.orbit {
+  width: 40px; height: 40px; position: relative; flex-shrink: 0;
+}
+.orbit.orbit-sm { width: 36px; height: 36px; }
 .orbit span {
   position: absolute; inset: 0; border-radius: 50%;
   border: 2px solid transparent; border-top-color: #2563eb;
   animation: spin 1s linear infinite;
 }
 .orbit span:nth-child(2) {
-  inset: 8px; border-top-color: #7c3aed; animation-duration: 1.4s; animation-direction: reverse;
+  inset: 6px; border-top-color: #7c3aed; animation-duration: 1.4s; animation-direction: reverse;
 }
 .orbit span:nth-child(3) {
-  inset: 16px; border-top-color: #38bdf8; animation-duration: 1.8s;
+  inset: 12px; border-top-color: #38bdf8; animation-duration: 1.8s;
 }
-.thinking-card h3 { margin: 0 0 6px; font-size: 18px; }
-.thinking-card > p { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
 .thinking-steps {
-  list-style: none; margin: 0 0 14px; padding: 0;
-  text-align: left; display: grid; gap: 8px;
+  list-style: none; margin: 0 0 10px; padding: 0;
+  text-align: left; display: grid; gap: 6px;
 }
 .thinking-steps li {
-  font-size: 12px; color: #94a3b8;
-  padding: 8px 10px; border-radius: 10px; background: #f8fafc; border: 1px solid var(--line);
+  font-size: 11px; color: #94a3b8;
+  padding: 6px 8px; border-radius: 8px; background: #f8fafc; border: 1px solid var(--line);
   display: flex; align-items: center; gap: 8px;
 }
 .thinking-steps li::before {
-  content: ""; width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; flex-shrink: 0;
+  content: ""; width: 7px; height: 7px; border-radius: 50%; background: #cbd5e1; flex-shrink: 0;
 }
 .thinking-steps li.active {
   color: #1e3a8a; background: #eff6ff; border-color: #bfdbfe; font-weight: 600;
 }
 .thinking-steps li.active::before {
-  background: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.15);
+  background: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
 }
 .thinking-steps li.done { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
 .thinking-steps li.done::before { background: #10b981; }
 .progress {
-  height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden;
+  height: 5px; border-radius: 999px; background: #e2e8f0; overflow: hidden;
 }
 .progress i {
   display: block; height: 100%; width: 12%;

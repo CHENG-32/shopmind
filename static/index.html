@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#1d4ed8" />
   <title>掌柜参谋 ShopMind</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' fill='white' font-family='system-ui,sans-serif' font-weight='700'%3E掌%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/static/styles.css?v=20260727b" />
 </head>
 <body>
   <div class="page-bg" aria-hidden="true">
@@ -200,11 +200,11 @@
 
       <div class="engine-mode">
         <label class="mode-switch">
-          <input type="checkbox" id="useInfini" checked />
+          <input type="checkbox" id="useInfini" />
           <span class="switch-ui"></span>
           <span class="mode-text">
             <strong>InfiniSynapse 深度分析</strong>
-            <small>启用 Server API 任务流</small>
+            <small>默认关闭；开启后再提问才会走任务流</small>
           </span>
         </label>
       </div>
@@ -225,6 +225,27 @@
 
       <div id="chatLog" class="chat-log" role="log" aria-live="polite"></div>
 
+      <!-- Inline deep-analysis progress: only visible after user sends a question with InfiniSynapse on -->
+      <div class="thinking-inline" id="thinkingInline" hidden aria-live="polite">
+        <div class="thinking-inline-hd">
+          <div class="orbit orbit-sm" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div>
+            <h3 id="thinkingTitle">正在深度分析</h3>
+            <p id="thinkingDesc">连接 InfiniSynapse · 准备经营数据</p>
+          </div>
+        </div>
+        <ul class="thinking-steps" id="thinkingSteps">
+          <li class="active" data-step="1">启用数据源与知识库</li>
+          <li data-step="2">建立事件流 /ai/events</li>
+          <li data-step="3">创建分析任务 newTask</li>
+          <li data-step="4">上传订单与库存文件</li>
+          <li data-step="5">生成洞察与行动建议</li>
+        </ul>
+        <div class="progress"><i id="thinkingBar"></i></div>
+      </div>
+
       <form id="askForm" class="ask-form">
         <div class="ask-box">
           <textarea id="askInput" rows="2" placeholder="例如：分析近一周销售，找出下滑最明显的品类…" required></textarea>
@@ -233,7 +254,7 @@
             <span class="send-spinner" hidden></span>
           </button>
         </div>
-        <p class="ask-hint">深度分析开启时，将上传经营数据并发起 InfiniSynapse 分析任务；关闭则即时返回本地经营结论。</p>
+        <p class="ask-hint">默认本地即时分析；勾选「InfiniSynapse 深度分析」后再提问，才会在对话区展示分析进度，不会一进页面就弹窗。</p>
       </form>
     </aside>
   </main>
@@ -251,30 +272,11 @@
     <pre id="evidenceBody"></pre>
   </aside>
 
-  <!-- Loading overlay for deep analysis -->
-  <div class="thinking-overlay" id="thinkingOverlay" hidden>
-    <div class="thinking-card">
-      <div class="orbit">
-        <span></span><span></span><span></span>
-      </div>
-      <h3 id="thinkingTitle">正在深度分析</h3>
-      <p id="thinkingDesc">连接 InfiniSynapse · 准备经营数据</p>
-      <ul class="thinking-steps" id="thinkingSteps">
-        <li class="active" data-step="1">启用数据源与知识库</li>
-        <li data-step="2">建立事件流 /ai/events</li>
-        <li data-step="3">创建分析任务 newTask</li>
-        <li data-step="4">上传订单与库存文件</li>
-        <li data-step="5">生成洞察与行动建议</li>
-      </ul>
-      <div class="progress"><i id="thinkingBar"></i></div>
-    </div>
-  </div>
-
   <button type="button" class="fab" id="fabChat" aria-label="打开掌柜参谋">
     <span>问</span>
   </button>
 
   <div id="toast" class="toast" hidden></div>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=20260727b"></script>
 </body>
 </html>
