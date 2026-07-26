@@ -28,6 +28,181 @@ function toast(msg) {
   }, 2800);
 }
 
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Lightweight Markdown → HTML for AI answers.
+ * Escapes raw HTML first, then restores intentional structure
+ * (headings, lists, tables, code, emphasis, links).
+ */
+function renderMarkdown(src) {
+  if (src == null) return "";
+  let text = String(src).replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!text) return "";
+
+  const stash = [];
+  const put = (html) => {
+    const key = `\u0000MD${stash.length}\u0000`;
+    stash.push(html);
+    return key;
+  };
+
+  // Fenced code blocks
+  text = text.replace(/```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const langAttr = lang ? ` data-lang="${escapeHtml(lang)}"` : "";
+    return put(
+      `<pre class="md-code"${langAttr}><code>${escapeHtml(code.replace(/\n$/, ""))}</code></pre>`
+    );
+  });
+
+  // Escape remaining raw HTML
+  text = escapeHtml(text);
+
+  // Restore stashed blocks (they are already safe HTML)
+  text = text.replace(/\u0000MD(\d+)\u0000/g, (_, i) => stash[Number(i)]);
+
+  // Inline code (after escape so content is safe)
+  text = text.replace(/`([^`\n]+)`/g, (_, code) => `<code class="md-inline">${code}</code>`);
+
+  // Images ![alt](url) — only http(s)
+  text = text.replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, (_, alt, url) => {
+    return `<img class="md-img" src="${url}" alt="${alt}" loading="lazy" />`;
+  });
+
+  // Links [text](url) — only http(s)
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label, url) => {
+    return `<a class="md-link" href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
+
+  // Bold / italic (order matters; avoid lookbehind for broader browser support)
+  text = text.replace(/\*\*\*([^*\n]+)\*\*\*/g, "<strong><em>$1</em></strong>");
+  text = text.replace(/___([^_\n]+)___/g, "<strong><em>$1</em></strong>");
+  text = text.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/__([^_\n]+)__/g, "<strong>$1</strong>");
+  text = text.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+  text = text.replace(/_([^_\n]+)_/g, "<em>$1</em>");
+  text = text.replace(/~~([^~\n]+)~~/g, "<del>$1</del>");
+
+  // Horizontal rules
+  text = text.replace(/^(?:-{3,}|\*{3,}|_{3,})\s*$/gm, "<hr class=\"md-hr\" />");
+
+  // Blockquotes (line-level, then group)
+  text = text.replace(/^&gt;\s?(.*)$/gm, '<div class="md-quote-line">$1</div>');
+
+  // Headings
+  text = text.replace(/^######\s+(.+)$/gm, "<h6>$1</h6>");
+  text = text.replace(/^#####\s+(.+)$/gm, "<h5>$1</h5>");
+  text = text.replace(/^####\s+(.+)$/gm, "<h4>$1</h4>");
+  text = text.replace(/^###\s+(.+)$/gm, "<h3>$1</h3>");
+  text = text.replace(/^##\s+(.+)$/gm, "<h2>$1</h2>");
+  text = text.replace(/^#\s+(.+)$/gm, "<h1>$1</h1>");
+
+  // Tables: consecutive lines with |
+  text = text.replace(/(^|\n)((?:\|.+\|\n)+)/g, (match, lead, block) => {
+    const rows = block.trim().split("\n").filter(Boolean);
+    if (rows.length < 2) return match;
+    const isSep = (row) => /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(row.trim());
+    const parseRow = (row) =>
+      row
+        .replace(/^\|/, "")
+        .replace(/\|$/, "")
+        .split("|")
+        .map((c) => c.trim());
+
+    let header = parseRow(rows[0]);
+    let bodyStart = 1;
+    if (rows[1] && isSep(rows[1])) {
+      bodyStart = 2;
+    } else {
+      // No separator — treat first row as body-only simple table
+      header = null;
+      bodyStart = 0;
+    }
+
+    let html = '<div class="md-table-wrap"><table class="md-table">';
+    if (header) {
+      html += "<thead><tr>" + header.map((c) => `<th>${c}</th>`).join("") + "</tr></thead>";
+    }
+    html += "<tbody>";
+    for (let i = bodyStart; i < rows.length; i++) {
+      if (isSep(rows[i])) continue;
+      const cells = parseRow(rows[i]);
+      html += "<tr>" + cells.map((c) => `<td>${c}</td>`).join("") + "</tr>";
+    }
+    html += "</tbody></table></div>";
+    return lead + html + "\n";
+  });
+
+  // Lists: group consecutive list items
+  const lines = text.split("\n");
+  const out = [];
+  let listType = null; // "ul" | "ol"
+  let listBuf = [];
+
+  const flushList = () => {
+    if (!listType) return;
+    const tag = listType;
+    out.push(`<${tag} class="md-list">` + listBuf.map((li) => `<li>${li}</li>`).join("") + `</${tag}>`);
+    listType = null;
+    listBuf = [];
+  };
+
+  for (const line of lines) {
+    const ul = line.match(/^\s*[-*+]\s+(.+)$/);
+    const ol = line.match(/^\s*\d+[.)]\s+(.+)$/);
+    if (ul) {
+      if (listType && listType !== "ul") flushList();
+      listType = "ul";
+      listBuf.push(ul[1]);
+      continue;
+    }
+    if (ol) {
+      if (listType && listType !== "ol") flushList();
+      listType = "ol";
+      listBuf.push(ol[1]);
+      continue;
+    }
+    flushList();
+    out.push(line);
+  }
+  flushList();
+  text = out.join("\n");
+
+  // Group quote lines into blockquote
+  text = text.replace(/(?:<div class="md-quote-line">[\s\S]*?<\/div>\n?)+/g, (block) => {
+    const inner = block
+      .replace(/<div class="md-quote-line">/g, "")
+      .replace(/<\/div>\n?/g, "\n")
+      .trim()
+      .replace(/\n/g, "<br />");
+    return `<blockquote class="md-quote">${inner}</blockquote>\n`;
+  });
+
+  // Paragraphs: split on blank lines; leave block elements alone
+  const blocks = text.split(/\n{2,}/);
+  text = blocks
+    .map((block) => {
+      const t = block.trim();
+      if (!t) return "";
+      if (/^<(h[1-6]|ul|ol|pre|table|blockquote|hr|div|p)\b/i.test(t)) return t;
+      // Single-line already-wrapped block
+      if (/^<\/?(h[1-6]|ul|ol|pre|table|blockquote|hr|div)/i.test(t)) return t;
+      // Keep intentional single newlines as <br>
+      return `<p>${t.replace(/\n/g, "<br />")}</p>`;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  return text;
+}
+
 function openAssistant() {
   const panel = $("#assistantPanel");
   panel.classList.add("open");
@@ -196,7 +371,18 @@ function addBubble(role, text, meta = "") {
   const log = $("#chatLog");
   const div = document.createElement("div");
   div.className = `bubble ${role}`;
-  div.textContent = text;
+
+  if (role === "bot") {
+    // AI answers often arrive as Markdown — render structure, never raw HTML from model.
+    const body = document.createElement("div");
+    body.className = "md-body";
+    body.innerHTML = renderMarkdown(text);
+    div.appendChild(body);
+  } else {
+    // User messages stay plain text (no markdown injection).
+    div.textContent = text;
+  }
+
   if (meta) {
     const m = document.createElement("span");
     m.className = "meta";

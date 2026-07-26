@@ -504,7 +504,6 @@ code {
   padding: 10px 12px;
   border-radius: 16px;
   font-size: 13px;
-  white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.55;
   animation: bubbleIn .22s ease;
@@ -518,6 +517,7 @@ code {
   background: linear-gradient(135deg, #2563eb, #4f46e5);
   color: #fff;
   border-bottom-right-radius: 5px;
+  white-space: pre-wrap;
 }
 .bubble.bot {
   justify-self: start;
@@ -527,10 +527,141 @@ code {
   box-shadow: var(--shadow-sm);
 }
 .bubble .meta {
-  display: block; margin-top: 6px; font-size: 11px; opacity: 0.75;
+  display: block; margin-top: 8px; font-size: 11px; opacity: 0.75;
 }
 .bubble.user .meta { color: rgba(255,255,255,0.85); }
 .bubble.bot .meta { color: var(--muted); }
+
+/* Rendered Markdown inside AI answers */
+.md-body {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.md-body > :first-child { margin-top: 0; }
+.md-body > :last-child { margin-bottom: 0; }
+.md-body p {
+  margin: 0 0 0.65em;
+}
+.md-body p:last-child { margin-bottom: 0; }
+.md-body h1,
+.md-body h2,
+.md-body h3,
+.md-body h4,
+.md-body h5,
+.md-body h6 {
+  margin: 0.85em 0 0.4em;
+  line-height: 1.3;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.md-body h1 { font-size: 1.15em; }
+.md-body h2 { font-size: 1.08em; }
+.md-body h3 { font-size: 1.02em; }
+.md-body h4,
+.md-body h5,
+.md-body h6 { font-size: 1em; color: var(--text-2); }
+.md-body .md-list {
+  margin: 0.35em 0 0.7em;
+  padding-left: 1.25em;
+}
+.md-body ul.md-list { list-style: disc; }
+.md-body ol.md-list { list-style: decimal; }
+.md-body .md-list li {
+  margin: 0.25em 0;
+  padding-left: 0.15em;
+}
+.md-body .md-list li::marker {
+  color: #64748b;
+}
+.md-body strong { font-weight: 700; color: #0f172a; }
+.md-body em { font-style: italic; }
+.md-body del { color: var(--muted); }
+.md-body .md-inline {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+  color: #4338ca;
+}
+.md-body .md-code {
+  margin: 0.5em 0 0.75em;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  border: 1px solid #1e293b;
+}
+.md-body .md-code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  border-radius: 0;
+  font-size: inherit;
+}
+.md-body .md-quote {
+  margin: 0.5em 0 0.75em;
+  padding: 8px 12px;
+  border-left: 3px solid #93c5fd;
+  background: #f8fafc;
+  border-radius: 0 10px 10px 0;
+  color: var(--text-2);
+}
+.md-body .md-hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 0.85em 0;
+}
+.md-body .md-link {
+  color: #2563eb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md-body .md-link:hover { color: #1d4ed8; }
+.md-body .md-img {
+  max-width: 100%;
+  border-radius: 10px;
+  margin: 0.5em 0;
+  display: block;
+}
+.md-body .md-table-wrap {
+  margin: 0.5em 0 0.75em;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.md-body .md-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 200px;
+}
+.md-body .md-table th,
+.md-body .md-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.md-body .md-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.md-body .md-table tr:last-child td { border-bottom: 0; }
+.md-body .md-table tbody tr:nth-child(even) td {
+  background: #fafbff;
+}
 
 /* Typing indicator inside chat */
 .bubble.typing {
