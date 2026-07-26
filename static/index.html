@@ -3,127 +3,276 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-  <meta name="description" content="掌柜参谋 ShopMind：小微餐饮与零售门店的 AI 经营分析，经营日报、异常哨兵、证据链与自然语言问数。" />
-  <meta name="theme-color" content="#2563eb" />
+  <meta name="description" content="掌柜参谋 ShopMind：用自然语言看懂门店经营。异常哨兵、证据链与可执行行动，数据分析由 InfiniSynapse 驱动。" />
+  <meta name="theme-color" content="#1d4ed8" />
   <title>掌柜参谋 ShopMind</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' fill='white' font-family='sans-serif' font-weight='700'%3E掌%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' fill='white' font-family='system-ui,sans-serif' font-weight='700'%3E掌%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-  <div class="bg-orb orb-a"></div>
-  <div class="bg-orb orb-b"></div>
+  <div class="page-bg" aria-hidden="true">
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+    <div class="grid-mask"></div>
+  </div>
 
   <header class="topbar">
     <div class="brand">
-      <div class="logo">掌</div>
+      <div class="logo" aria-hidden="true">掌</div>
       <div>
         <div class="brand-name">掌柜参谋 <span>ShopMind</span></div>
-        <div class="brand-sub">小微经营分析 · Powered by InfiniSynapse</div>
+        <div class="brand-sub">门店经营 · 自然语言分析</div>
       </div>
     </div>
+    <nav class="top-nav">
+      <a href="#pain">为什么需要</a>
+      <a href="#dashboard">经营看板</a>
+      <a href="#sentinels">异常哨兵</a>
+      <a href="#engine">分析引擎</a>
+    </nav>
     <div class="top-actions">
-      <span id="healthPill" class="pill">检测中…</span>
-      <a class="link" href="/api/integration" target="_blank">系统状态</a>
-      <a class="link" href="https://infinisynapse.cn" target="_blank" rel="noopener">Powered by InfiniSynapse</a>
+      <span id="healthPill" class="status-pill">连接中…</span>
+      <button type="button" class="btn-primary" id="openChatBtn">开始问数</button>
     </div>
   </header>
 
-  <main class="layout">
-    <section class="hero card">
-      <div>
-        <div class="eyebrow">小微经营数据分析</div>
-        <h1>不会 Excel / SQL，也能看懂店里的账</h1>
-        <p class="lead">
-          连接订单、库存与业务知识库，自动生成<strong>经营日报</strong>、<strong>异常哨兵</strong>与<strong>可执行行动</strong>。
-          支持自然语言追问，每条洞察附带数据证据链，帮你从「看出问题」走到「今天做什么」。
-        </p>
-        <div class="hero-steps">
-          <div><b>1</b>看清今日经营</div>
-          <div><b>2</b>锁定异常与证据</div>
-          <div><b>3</b>问一句，拿行动</div>
-        </div>
-      </div>
-      <div class="hero-meta" id="dataMeta">加载数据中…</div>
-    </section>
-
-    <section class="kpis" id="kpiRow"></section>
-
-    <section class="grid-2">
-      <div class="card">
-        <div class="card-hd">
-          <h2>经营趋势（近 30 日 GMV）</h2>
-          <span class="muted" id="periodLabel"></span>
-        </div>
-        <div class="chart" id="trendChart"></div>
-        <div class="mini-grid">
-          <div>
-            <h3>Top SKU</h3>
-            <ul id="topSkuList" class="list"></ul>
+  <main class="shell">
+    <!-- Left: product content -->
+    <div class="content-col">
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="badge-row">
+            <span class="badge">小微门店经营分析</span>
+            <span class="badge badge-soft">InfiniSynapse 驱动</span>
           </div>
-          <div>
-            <h3>门店 / 渠道</h3>
-            <ul id="storeList" class="list"></ul>
+          <h1>店里天天有数据，<br /><em>却看不懂该干什么</em></h1>
+          <p class="lead">
+            很多老板卡在 Excel 和报表里：知道「今天卖了多少」，却不知道
+            <strong>哪里在掉、库存会不会断、今天该先做什么</strong>。
+            掌柜参谋把订单与库存变成经营日报、异常提醒和可执行动作，也能直接用大白话追问。
+          </p>
+          <div class="hero-cta">
+            <button type="button" class="btn-primary btn-lg" id="heroAskBtn">用一句话问经营问题</button>
+            <a class="btn-ghost btn-lg" href="#sentinels">先看异常哨兵</a>
+          </div>
+          <ul class="pain-bullets" id="pain">
+            <li>
+              <span class="icon">📉</span>
+              <div>
+                <strong>销量悄悄下滑</strong>
+                <p>等月底才发现某个爆款凉了，已经晚了</p>
+              </div>
+            </li>
+            <li>
+              <span class="icon">📦</span>
+              <div>
+                <strong>补货靠感觉</strong>
+                <p>热销断货、滞销积压，都在蚕食利润</p>
+              </div>
+            </li>
+            <li>
+              <span class="icon">🎟️</span>
+              <div>
+                <strong>优惠发多了</strong>
+                <p>看着单量在涨，毛利却在被券吃掉</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="hero-panel">
+          <div class="panel-label">今日经营快照</div>
+          <div id="dataMeta" class="snapshot">加载中…</div>
+          <div class="snapshot-foot">
+            <span>示例门店 · 星野手作茶</span>
+            <span id="periodLabel" class="muted">—</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
+      <section class="kpis" id="kpiRow" aria-label="关键指标"></section>
+
+      <section class="engine-strip" id="engine">
+        <div class="engine-head">
+          <div>
+            <h2>泛数据分析引擎</h2>
+            <p>自然语言理解意图，连接经营数据，完成查询、分析到洞察。深度分析由 InfiniSynapse Server API 驱动。</p>
+          </div>
+          <a class="text-link" href="https://infinisynapse.cn" target="_blank" rel="noopener">了解 InfiniSynapse</a>
+        </div>
+        <div class="pipeline">
+          <div class="pipe-step">
+            <div class="pipe-no">01</div>
+            <h3>连接数据</h3>
+            <p>订单 · 库存 · 日报 · 业务知识库</p>
+            <code>data source / knowledge</code>
+          </div>
+          <div class="pipe-arrow" aria-hidden="true">→</div>
+          <div class="pipe-step">
+            <div class="pipe-no">02</div>
+            <h3>发起分析任务</h3>
+            <p>用大白话描述你想知道的事</p>
+            <code>POST /api/ai/message</code>
+          </div>
+          <div class="pipe-arrow" aria-hidden="true">→</div>
+          <div class="pipe-step">
+            <div class="pipe-no">03</div>
+            <h3>实时事件流</h3>
+            <p>任务进度与结论持续回传</p>
+            <code>GET /api/ai/events</code>
+          </div>
+          <div class="pipe-arrow" aria-hidden="true">→</div>
+          <div class="pipe-step">
+            <div class="pipe-no">04</div>
+            <h3>洞察与行动</h3>
+            <p>异常、证据、今日可执行建议</p>
+            <code>completion_result</code>
+          </div>
+        </div>
+      </section>
+
+      <section class="board" id="dashboard">
+        <div class="card">
+          <div class="card-hd">
+            <div>
+              <h2>经营趋势</h2>
+              <p class="muted">近 30 日 GMV</p>
+            </div>
+          </div>
+          <div class="chart" id="trendChart"></div>
+          <div class="split-lists">
+            <div>
+              <h3>热销 SKU</h3>
+              <ul id="topSkuList" class="soft-list"></ul>
+            </div>
+            <div>
+              <h3>门店与渠道</h3>
+              <ul id="storeList" class="soft-list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="sentinels">
+          <div class="card-hd">
+            <div>
+              <h2>异常哨兵</h2>
+              <p class="muted">主动发现，而不是等你想起来再查</p>
+            </div>
+            <span class="count-pill" id="sentinelCount">0</span>
+          </div>
+          <div id="sentinelList" class="sentinel-list"></div>
+        </div>
+      </section>
+
+      <section class="card actions-card">
         <div class="card-hd">
-          <h2>异常哨兵</h2>
-          <span class="muted">销量 · 库存 · 优惠 · 退款</span>
+          <div>
+            <h2>今日行动</h2>
+            <p class="muted">从洞察落到「现在就能做的事」</p>
+          </div>
         </div>
-        <div id="sentinelList" class="sentinel-list"></div>
-      </div>
-    </section>
+        <div id="actionList" class="action-grid"></div>
+      </section>
 
-    <section class="grid-2">
-      <div class="card">
-        <div class="card-hd">
-          <h2>今日行动清单</h2>
-          <span class="muted">从异常到动作</span>
+      <footer class="site-footer">
+        <div>
+          <strong>掌柜参谋 ShopMind</strong>
+          <span>小微餐饮 / 零售经营分析</span>
         </div>
-        <div id="actionList" class="action-list"></div>
-      </div>
-
-      <div class="card chat-card">
-        <div class="card-hd">
-          <h2>问掌柜参谋</h2>
-          <label class="toggle">
-            <input type="checkbox" id="useInfini" checked />
-            <span>深度分析（InfiniSynapse）</span>
-          </label>
+        <div class="footer-meta">
+          <span>示例数据：星野手作茶（虚构）</span>
+          <span>分析能力接入 InfiniSynapse</span>
         </div>
-        <div class="chips" id="chipRow">
-          <button type="button" data-q="最近一周哪个品类下滑最明显？主要是哪家店？">品类下滑</button>
-          <button type="button" data-q="哪些 SKU 有断货风险？今天该补什么货？">断货风险</button>
-          <button type="button" data-q="给我 3 条今天就能执行的提升毛利行动，并说明依据。">行动建议</button>
-          <button type="button" data-q="万达店杨枝甘露最近怎么了？结合渠道和会员看一下。">单店深挖</button>
+      </footer>
+    </div>
+
+    <!-- Right: sticky AI panel -->
+    <aside class="assistant" id="assistantPanel" aria-label="掌柜参谋对话">
+      <div class="assistant-hd">
+        <div class="assistant-title">
+          <div class="pulse-dot" id="assistantDot"></div>
+          <div>
+            <strong>掌柜参谋</strong>
+            <span>自然语言经营问答</span>
+          </div>
         </div>
-        <div id="chatLog" class="chat-log"></div>
-        <form id="askForm" class="ask-form">
-          <input id="askInput" type="text" placeholder="例如：分析近一周销售，找出下滑最明显的品类…" autocomplete="off" required />
-          <button type="submit" id="askBtn">分析</button>
-        </form>
-        <p class="hint">开启「深度分析」时，将结合经营数据由 InfiniSynapse 作答；关闭则使用本地经营引擎即时回答。</p>
+        <button type="button" class="icon-btn" id="closeChatMobile" aria-label="关闭对话">✕</button>
       </div>
-    </section>
 
-    <section class="card evidence-card" id="evidencePanel" hidden>
-      <div class="card-hd">
-        <h2>证据链</h2>
-        <button type="button" class="linkish" id="closeEvidence">关闭</button>
+      <div class="engine-mode">
+        <label class="mode-switch">
+          <input type="checkbox" id="useInfini" checked />
+          <span class="switch-ui"></span>
+          <span class="mode-text">
+            <strong>InfiniSynapse 深度分析</strong>
+            <small>启用 Server API 任务流</small>
+          </span>
+        </label>
       </div>
-      <pre id="evidenceBody"></pre>
-    </section>
 
-    <footer class="footer">
-      <div>
-        <strong>掌柜参谋 ShopMind</strong> · 小微餐饮 / 零售经营分析 ·
-        数据分析引擎接入 InfiniSynapse
+      <div class="api-chip-row" title="深度分析调用链路">
+        <span class="api-chip">events</span>
+        <span class="api-chip">newTask</span>
+        <span class="api-chip">taskUpload</span>
+        <span class="api-chip">result</span>
       </div>
-      <div class="muted">当前示例数据为虚构品牌「星野手作茶」三门店近 90 天经营数据，可替换为你的真实门店表格。</div>
-    </footer>
+
+      <div class="chips" id="chipRow">
+        <button type="button" data-q="最近一周哪个品类下滑最明显？主要是哪家店？">品类下滑</button>
+        <button type="button" data-q="哪些 SKU 有断货风险？今天该补什么货？">断货风险</button>
+        <button type="button" data-q="给我 3 条今天就能执行的提升毛利行动，并说明依据。">行动建议</button>
+        <button type="button" data-q="万达店杨枝甘露最近怎么了？结合渠道和会员看一下。">单店深挖</button>
+      </div>
+
+      <div id="chatLog" class="chat-log" role="log" aria-live="polite"></div>
+
+      <form id="askForm" class="ask-form">
+        <div class="ask-box">
+          <textarea id="askInput" rows="2" placeholder="例如：分析近一周销售，找出下滑最明显的品类…" required></textarea>
+          <button type="submit" id="askBtn" class="send-btn">
+            <span class="send-label">发送</span>
+            <span class="send-spinner" hidden></span>
+          </button>
+        </div>
+        <p class="ask-hint">深度分析开启时，将上传经营数据并发起 InfiniSynapse 分析任务；关闭则即时返回本地经营结论。</p>
+      </form>
+    </aside>
   </main>
+
+  <!-- Evidence drawer -->
+  <div class="drawer-mask" id="evidenceMask" hidden></div>
+  <aside class="drawer" id="evidenceDrawer" hidden aria-hidden="true">
+    <div class="drawer-hd">
+      <div>
+        <h2>证据链</h2>
+        <p class="muted" id="evidenceTitle">数据依据</p>
+      </div>
+      <button type="button" class="icon-btn" id="closeEvidence" aria-label="关闭">✕</button>
+    </div>
+    <pre id="evidenceBody"></pre>
+  </aside>
+
+  <!-- Loading overlay for deep analysis -->
+  <div class="thinking-overlay" id="thinkingOverlay" hidden>
+    <div class="thinking-card">
+      <div class="orbit">
+        <span></span><span></span><span></span>
+      </div>
+      <h3 id="thinkingTitle">正在深度分析</h3>
+      <p id="thinkingDesc">连接 InfiniSynapse · 准备经营数据</p>
+      <ul class="thinking-steps" id="thinkingSteps">
+        <li class="active" data-step="1">启用数据源与知识库</li>
+        <li data-step="2">建立事件流 /ai/events</li>
+        <li data-step="3">创建分析任务 newTask</li>
+        <li data-step="4">上传订单与库存文件</li>
+        <li data-step="5">生成洞察与行动建议</li>
+      </ul>
+      <div class="progress"><i id="thinkingBar"></i></div>
+    </div>
+  </div>
+
+  <button type="button" class="fab" id="fabChat" aria-label="打开掌柜参谋">
+    <span>问</span>
+  </button>
 
   <div id="toast" class="toast" hidden></div>
   <script src="/static/app.js"></script>
