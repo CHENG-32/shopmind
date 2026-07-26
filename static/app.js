@@ -247,6 +247,8 @@ function setBusy(busy, deep = false) {
 
 function startThinkingOverlay() {
   const overlay = $("#thinkingOverlay");
+  if (!overlay) return;
+  // Only show during an explicit deep-analysis request — never on page load.
   overlay.hidden = false;
   const steps = [...$("#thinkingSteps").querySelectorAll("li")];
   steps.forEach((li, i) => {
