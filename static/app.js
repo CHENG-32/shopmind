@@ -240,15 +240,15 @@ async function loadHealth() {
     const j = await r.json();
     const pill = $("#healthPill");
     if (j.infinisynapse_configured) {
-      pill.textContent = "InfiniSynapse 已连接";
+      pill.textContent = "分析引擎就绪";
       pill.classList.add("ok");
     } else {
-      pill.textContent = "分析服务未配置";
+      pill.textContent = "分析引擎暂不可用";
       pill.classList.add("bad");
     }
   } catch {
     const pill = $("#healthPill");
-    pill.textContent = "服务异常";
+    pill.textContent = "服务暂时不可用";
     pill.classList.add("bad");
   }
 }
@@ -442,7 +442,7 @@ function startThinkingOverlay() {
     li.classList.remove("done");
   });
   $("#thinkingTitle").textContent = "正在深度分析";
-  $("#thinkingDesc").textContent = "连接 InfiniSynapse · 准备经营数据";
+  $("#thinkingDesc").textContent = "正在整理订单、库存与经营知识…";
   const bar = $("#thinkingBar");
   if (bar) {
     bar.style.animation = "none";
@@ -452,11 +452,11 @@ function startThinkingOverlay() {
 
   let idx = 0;
   const descs = [
-    "启用数据源与知识库",
-    "建立事件流 GET /api/ai/events",
-    "创建分析任务 POST /api/ai/message",
-    "上传订单 / 库存 / 知识库文件",
-    "汇总洞察与行动建议",
+    "正在读取经营数据…",
+    "正在理解你的问题…",
+    "正在交叉比对门店与品类…",
+    "正在定位异常与机会…",
+    "正在整理洞察与行动建议…",
   ];
   clearInterval(state.stepTimer);
   state.stepTimer = setInterval(() => {
@@ -470,7 +470,6 @@ function startThinkingOverlay() {
       $("#thinkingDesc").textContent = descs[idx] || "分析进行中…";
     }
   }, 2200);
-  // Keep the progress in view inside the chat column
   panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
@@ -506,21 +505,21 @@ async function ask(question) {
 
     const sourceLabel =
       {
-        infinisynapse: "InfiniSynapse 深度分析",
-        local: "本地经营引擎",
-        local_fallback: "本地经营引擎（回退）",
-      }[j.source] || j.source;
+        infinisynapse: "深度分析",
+        local: "经营速览",
+        local_fallback: "经营速览",
+      }[j.source] || "掌柜参谋";
     const meta = [sourceLabel, j.elapsed_sec != null ? `${j.elapsed_sec}s` : null]
       .filter(Boolean)
       .join(" · ");
-    addBubble("bot", j.answer || j.error || "暂无结果", meta);
+    addBubble("bot", j.answer || j.error || "暂时没有可用结论，请换个问法再试。", meta);
     focusAssistant();
     scrollChatToBottom(true);
-    if (j.source === "infinisynapse") toast("深度分析完成");
+    if (j.source === "infinisynapse") toast("分析完成");
   } catch (e) {
     removeTypingBubble();
     stopThinkingOverlay();
-    addBubble("bot", "请求失败：" + e.message);
+    addBubble("bot", "分析暂时失败，请稍后再试。");
     focusAssistant();
   } finally {
     setBusy(false);
@@ -549,9 +548,8 @@ async function boot() {
 
   addBubble(
     "bot",
-    "你好，我是掌柜参谋。\n左侧可看经营异常与今日行动；点「查看证据链」核对数据依据。\n深度分析默认已开启：你提问后我会在本对话区展示 InfiniSynapse 进度，不会一进页面就弹窗。若只要本地即时结论，可先关闭开关。"
+    "你好，我是掌柜参谋。\n\n左侧可以查看经营异常与今日行动；点「查看证据链」可核对数据依据。\n\n直接用大白话提问即可，例如「哪家店最近在掉」「今天该先补什么货」。"
   );
-  // Safety: never leave analysis progress visible after cold load / refresh.
   stopThinkingOverlay();
 }
 
