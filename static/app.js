@@ -363,7 +363,7 @@ async function boot() {
 
   addBubble(
     "bot",
-    "你好，我是掌柜参谋。\n左侧可看经营异常与今日行动；点「查看证据链」核对数据依据。\n默认是本地即时分析；需要更深度的结论时，再勾选「InfiniSynapse 深度分析」后提问——进度会出现在本对话区，不会挡住整页。"
+    "你好，我是掌柜参谋。\n左侧可看经营异常与今日行动；点「查看证据链」核对数据依据。\n深度分析默认已开启：你提问后我会在本对话区展示 InfiniSynapse 进度，不会一进页面就弹窗。若只要本地即时结论，可先关闭开关。"
   );
   // Safety: never leave analysis progress visible after cold load / refresh.
   stopThinkingOverlay();
