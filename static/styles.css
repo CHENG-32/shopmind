@@ -285,6 +285,8 @@ code {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
   gap: 14px;
+  /* Don't stretch columns to equal height — that left empty space under 异常哨兵 */
+  align-items: start;
 }
 .card {
   background: var(--bg-elevated);
@@ -292,6 +294,7 @@ code {
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   padding: 16px;
+  height: fit-content;
 }
 .card-hd {
   display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
@@ -304,6 +307,15 @@ code {
   border-radius: 999px; display: inline-grid; place-items: center;
   background: #eff6ff; color: #1d4ed8; font-weight: 800; font-size: 12px;
   border: 1px solid #bfdbfe;
+}
+#sentinels {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#sentinels .card-hd {
+  margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .chart {
@@ -338,8 +350,12 @@ code {
 
 /* Sentinels */
 .sentinel-list {
-  display: grid; gap: 10px;
-  max-height: 520px; overflow: auto; padding-right: 2px;
+  display: grid;
+  gap: 10px;
+  /* Grow with content; only scroll when truly long — avoid tall empty card body */
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
 }
 .sentinel {
   border: 1px solid var(--line);
