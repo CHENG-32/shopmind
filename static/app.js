@@ -832,7 +832,7 @@ function askDeep(q) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${state.token}`,
         },
-        body: JSON.stringify({ question: q, use_infini: true, timeout_sec: 210 }),
+        body: JSON.stringify({ question: q, use_infini: true, timeout_sec: 1000 }),
       });
     } catch (e) {
       finishStreamError("网络异常，无法建立分析通道");

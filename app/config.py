@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     infinisynapse_base_url: str = "https://app.infinisynapse.cn/api"
     host: str = "0.0.0.0"
     port: int = 8080
-    analysis_timeout_sec: int = 180
+    analysis_timeout_sec: int = 1000
 
 
 def get_settings() -> Settings:

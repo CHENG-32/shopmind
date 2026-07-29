@@ -136,7 +136,7 @@ class InfiniSynapseClient:
         self,
         prompt: str,
         files: list[Path] | None = None,
-        timeout_sec: int = 180,
+        timeout_sec: int = 1000,
         on_event: Callable[[str, dict[str, Any]], None] | None = None,
         on_stage: Callable[[str, dict[str, Any]], None] | None = None,
     ) -> dict[str, Any]:
@@ -367,7 +367,7 @@ def stream_analysis(
     client: "InfiniSynapseClient",
     prompt: str,
     files: list[Path] | None = None,
-    timeout_sec: int = 180,
+    timeout_sec: int = 1000,
 ):
     """把 InfiniSynapse 的阻塞式分析转成事件流（dict 生成器）。
 

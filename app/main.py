@@ -62,7 +62,7 @@ def get_data():
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=2, max_length=2000, description="自然语言经营问题")
     use_infini: bool = Field(True, description="是否调用 InfiniSynapse Agent（需登录）")
-    timeout_sec: int | None = Field(None, ge=30, le=300)
+    timeout_sec: int | None = Field(None, ge=30, le=1200)
 
 
 class AskResponse(BaseModel):
