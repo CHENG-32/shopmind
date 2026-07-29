@@ -72,6 +72,74 @@ def period_metrics(orders: pd.DataFrame) -> dict[str, float]:
     }
 
 
+def _health_score(
+    cur_m: dict[str, float],
+    prev_m: dict[str, float],
+    sentinels: list[dict[str, Any]] | None = None,
+    refund_rate: float = 0.0,
+) -> dict[str, Any]:
+    """经营健康度：100 分起评，按异常严重度 / 环比下滑 / 退款率扣分。"""
+    score = 100.0
+    factors: list[dict[str, Any]] = []
+
+    sev_penalty = {"high": 12, "medium": 6, "low": 2}
+    for s in (sentinels or [])[:6]:
+        p = sev_penalty.get(s.get("severity"), 0)
+        if p:
+            score -= p
+            factors.append({"label": s["title"], "impact": -p, "kind": "sentinel"})
+
+    gmv_wow = _pct(float(cur_m.get("gmv", 0)), float(prev_m.get("gmv", 0)))
+    if gmv_wow is not None and gmv_wow < 0:
+        p = min(round(abs(gmv_wow) * 0.5), 10)
+        score -= p
+        factors.append({"label": f"近7日 GMV 环比 {gmv_wow}%", "impact": -p, "kind": "trend"})
+    elif gmv_wow is not None and gmv_wow > 5:
+        bonus = min(round(gmv_wow * 0.2), 4)
+        score += bonus
+        factors.append({"label": f"近7日 GMV 环比 +{gmv_wow}%", "impact": bonus, "kind": "trend"})
+
+    if refund_rate > 3:
+        p = min(round((refund_rate - 3) * 2), 8)
+        score -= p
+        factors.append({"label": f"近7日退款率 {refund_rate:.1f}%（偏高）", "impact": -p, "kind": "refund"})
+
+    score = max(35.0, min(98.0, score))
+    grade, grade_cls = (
+        ("优秀", "excellent") if score >= 85
+        else ("良好", "good") if score >= 70
+        else ("关注", "watch") if score >= 55
+        else ("预警", "alert")
+    )
+    if not factors:
+        factors.append({"label": "各项指标平稳，无高优异常", "impact": 0, "kind": "ok"})
+    return {"score": round(score), "grade": grade, "grade_cls": grade_cls,
+            "refund_rate": round(refund_rate, 2), "factors": factors[:6]}
+
+
+def _forecast_7d(weeks: list[float], cur_m: dict[str, float]) -> dict[str, Any]:
+    """未来 7 日 GMV 预估：
+    近4周周总量按 0.45/0.25/0.17/0.13 衰减加权，再与本周实际（若已过半周）折中。"""
+    last7 = float(cur_m.get("gmv", 0))
+    if not weeks:
+        pred = last7
+        method = "数据不足 28 天，按近 7 日实际值平推"
+    else:
+        w = [0.45, 0.25, 0.17, 0.13]
+        base = sum(wi * wi_ for wi, wi_ in zip(w, weeks[::-1])) / sum(w[: len(weeks)])
+        pred = 0.6 * last7 + 0.4 * base
+        method = "近 4 周周总量衰减加权 × 本周实际折中"
+    low = round(pred * 0.88)
+    high = round(pred * 1.12)
+    return {
+        "pred_gmv": round(pred),
+        "range": [low, high],
+        "daily_avg": round(pred / 7),
+        "vs_last7_pct": _pct(pred, last7) if last7 else None,
+        "method": method,
+    }
+
+
 def build_dashboard(data: ShopData) -> dict[str, Any]:
     orders = _valid_orders(data.orders)
     max_date = pd.to_datetime(orders["biz_date"]).max()
@@ -99,10 +167,15 @@ def build_dashboard(data: ShopData) -> dict[str, Any]:
         for r in daily_tail.itertuples()
     ]
 
-    # Top SKU last 7d
+    # Top SKU last 7d（含毛利与毛利率）
     sku = (
         cur.groupby(["sku_name", "category"], as_index=False)
-        .agg(gmv=("pay_amount", "sum"), qty=("quantity", "sum"), orders=("order_id", "count"))
+        .agg(
+            gmv=("pay_amount", "sum"),
+            qty=("quantity", "sum"),
+            orders=("order_id", "count"),
+            cost=("cost_amount", "sum"),
+        )
         .sort_values("gmv", ascending=False)
     )
     top_skus = [
@@ -112,6 +185,8 @@ def build_dashboard(data: ShopData) -> dict[str, Any]:
             "gmv": round(float(r.gmv), 2),
             "qty": int(r.qty),
             "orders": int(r.orders),
+            "gross_profit": round(float(r.gmv) - float(r.cost), 2),
+            "margin_pct": round((float(r.gmv) - float(r.cost)) / float(r.gmv) * 100, 1) if r.gmv else 0.0,
         }
         for r in sku.head(8).itertuples()
     ]
@@ -136,6 +211,112 @@ def build_dashboard(data: ShopData) -> dict[str, Any]:
     channels = [
         {"channel": r.channel, "gmv": round(float(r.gmv), 2), "orders": int(r.orders)}
         for r in ch.itertuples()
+    ]
+
+    # 品类结构（近7日）
+    cat = (
+        cur.groupby("category", as_index=False)
+        .agg(gmv=("pay_amount", "sum"), qty=("quantity", "sum"))
+        .sort_values("gmv", ascending=False)
+    )
+    total_cat_gmv = float(cat["gmv"].sum()) or 1.0
+    categories = [
+        {
+            "category": r.category,
+            "gmv": round(float(r.gmv), 2),
+            "qty": int(r.qty),
+            "share": round(float(r.gmv) / total_cat_gmv * 100, 1),
+        }
+        for r in cat.itertuples()
+    ]
+
+    # 门店对比（近7日，含毛利与环比）
+    store_prev = prev.groupby("store_name", as_index=False)["pay_amount"].sum().rename(
+        columns={"pay_amount": "gmv_p"})
+    store_full = (
+        cur.groupby("store_name", as_index=False)
+        .agg(
+            gmv=("pay_amount", "sum"),
+            orders=("order_id", "count"),
+            cost=("cost_amount", "sum"),
+            qty=("quantity", "sum"),
+        )
+        .merge(store_prev, on="store_name", how="left")
+        .fillna({"gmv_p": 0.0})
+        .sort_values("gmv", ascending=False)
+    )
+    store_compare = [
+        {
+            "store": r.store_name,
+            "gmv": round(float(r.gmv), 2),
+            "orders": int(r.orders),
+            "qty": int(r.qty),
+            "gross_profit": round(float(r.gmv) - float(r.cost), 2),
+            "wow_pct": _pct(float(r.gmv), float(r.gmv_p)),
+        }
+        for r in store_full.itertuples()
+    ]
+
+    # 会员结构（近7日）
+    mem = (
+        cur.groupby("member_level", as_index=False)
+        .agg(gmv=("pay_amount", "sum"), orders=("order_id", "count"))
+        .sort_values("gmv", ascending=False)
+    )
+    total_mem = float(mem["gmv"].sum()) or 1.0
+    mem_level_order = ["金卡", "银卡", "普通会员", "新客", "非会员"]
+    members = sorted(
+        [
+            {
+                "level": r.member_level,
+                "gmv": round(float(r.gmv), 2),
+                "orders": int(r.orders),
+                "share": round(float(r.gmv) / total_mem * 100, 1),
+            }
+            for r in mem.itertuples()
+        ],
+        key=lambda x: mem_level_order.index(x["level"]) if x["level"] in mem_level_order else 99,
+    )
+    new_share = round(
+        sum(m["gmv"] for m in members if m["level"] in ("新客", "非会员")) / total_mem * 100, 1
+    )
+    loyal_share = round(
+        sum(m["gmv"] for m in members if m["level"] in ("金卡", "银卡")) / total_mem * 100, 1
+    )
+
+    # 经营健康度评分（本地综合打分，含哨兵惩罚）
+    all_orders = data.orders
+    last7_all = all_orders[(all_orders["biz_date"] >= last7_start) & (all_orders["biz_date"] <= max_s)]
+    refund_rate = float(last7_all["is_refund"].mean() * 100) if len(last7_all) else 0.0
+    health = _health_score(cur_m, prev_m, sentinels=build_sentinels(data), refund_rate=refund_rate)
+
+    # 未来 7 日 GMV 预估（近4周周总量加权 + 周趋势）
+    daily_sorted = data.daily.sort_values("biz_date")
+    weeks = []
+    if len(daily_sorted) >= 28:
+        gmv_series = daily_sorted["gmv"].astype(float).tolist()[-28:]
+        weeks = [sum(gmv_series[i * 7:(i + 1) * 7]) for i in range(4)]
+    forecast = _forecast_7d(weeks, cur_m)
+
+    # 渠道结构（近7日 donut）
+    total_ch_gmv = sum(c["gmv"] for c in channels) or 1.0
+    for c in channels:
+        c["share"] = round(c["gmv"] / total_ch_gmv * 100, 1)
+
+    # 时段热力（近14日）+ 峰值时段
+    recent14 = orders[orders["biz_date"] >= (max_date - pd.Timedelta(days=13)).date().isoformat()]
+    hourly = [0] * 24
+    if len(recent14):
+        hrs = pd.to_datetime(recent14["order_time"]).dt.hour
+        for h, cnt in hrs.value_counts().items():
+            hourly[int(h)] = int(cnt)
+    top3 = sorted(range(24), key=lambda h: hourly[h], reverse=True)[:3]
+    peak_hours = sorted([h for h in top3 if hourly[h] > 0])
+
+    # 近7日每日 GMV（迷你趋势，用于 KPI 卡）
+    spark7 = [
+        {"date": t["date"], "gmv": t["gmv"], "orders": t["orders"]}
+        for t in trend[-7:]
     ]
 
     kpis = []
@@ -167,9 +348,19 @@ def build_dashboard(data: ShopData) -> dict[str, Any]:
         },
         "kpis": kpis,
         "trend": trend,
+        "spark7": spark7,
         "top_skus": top_skus,
         "stores": stores,
+        "store_compare": store_compare,
         "channels": channels,
+        "categories": categories,
+        "hourly": hourly,
+        "peak_hours": peak_hours,
+        "members": members,
+        "new_member_share": new_share,
+        "loyal_member_share": loyal_share,
+        "health": health,
+        "forecast": forecast,
         "data_stats": {
             "order_rows": int(len(data.orders)),
             "inventory_rows": int(len(data.inventory)),
@@ -408,6 +599,115 @@ def build_action_board(sentinels: list[dict[str, Any]], limit: int = 5) -> list[
             }
         ]
     return actions
+
+
+_DATASETS = {
+    "orders": {
+        "title": "订单明细",
+        "file": "orders.csv",
+        "desc": "近约 90 天订单（门店/SKU/渠道/会员/实付/成本/退款标记）",
+    },
+    "inventory": {
+        "title": "库存水位",
+        "file": "inventory.csv",
+        "desc": "当前库存、安全库存与进价售价",
+    },
+    "daily": {
+        "title": "经营日报",
+        "file": "daily_summary.csv",
+        "desc": "按日汇总的 GMV / 订单 / 成本 / 退款 / 毛利",
+    },
+    "knowledge": {
+        "title": "业务知识库",
+        "file": "knowledge_base.md",
+        "desc": "品类术语、指标口径与分析建议",
+    },
+}
+
+
+def list_datasets(data_dir: Path | None = None) -> list[dict[str, Any]]:
+    root = data_dir or DATA_DIR
+    out = []
+    for key, meta in _DATASETS.items():
+        fp = root / meta["file"]
+        rows = None
+        cols: list[str] = []
+        if key == "knowledge":
+            rows = None
+            cols = []
+        elif fp.exists():
+            df = pd.read_csv(fp)
+            rows = int(len(df))
+            cols = list(df.columns)
+        out.append(
+            {
+                "key": key,
+                "title": meta["title"],
+                "file": meta["file"],
+                "desc": meta["desc"],
+                "rows": rows,
+                "columns": cols,
+                "exists": fp.exists(),
+            }
+        )
+    return out
+
+
+def dataset_profile(key: str, data_dir: Path | None = None) -> dict[str, Any]:
+    """数据画像：数值列 min/max/均值，类别列 Top 值。"""
+    root = data_dir or DATA_DIR
+    if key not in _DATASETS or key == "knowledge":
+        raise KeyError(key)
+    df = pd.read_csv(root / _DATASETS[key]["file"])
+    cols = []
+    for c in df.columns:
+        s = df[c]
+        if pd.api.types.is_numeric_dtype(s):
+            cols.append({
+                "name": c, "kind": "num",
+                "min": round(float(s.min()), 2), "max": round(float(s.max()), 2),
+                "avg": round(float(s.mean()), 2),
+            })
+        else:
+            top = s.value_counts().head(3)
+            cols.append({
+                "name": c, "kind": "cat", "unique": int(s.nunique()),
+                "top": [{"v": str(idx), "n": int(cnt)} for idx, cnt in top.items()],
+            })
+    return {"key": key, "title": _DATASETS[key]["title"], "rows": int(len(df)), "columns": cols}
+
+
+def preview_dataset(key: str, page: int = 1, size: int = 15, data_dir: Path | None = None) -> dict[str, Any]:
+    root = data_dir or DATA_DIR
+    if key not in _DATASETS:
+        raise KeyError(key)
+    meta = _DATASETS[key]
+    fp = root / meta["file"]
+    if key == "knowledge":
+        text = fp.read_text(encoding="utf-8") if fp.exists() else ""
+        return {"key": key, "title": meta["title"], "kind": "markdown", "content": text}
+
+    df = pd.read_csv(fp)
+    total = int(len(df))
+    page = max(page, 1)
+    size = min(max(size, 1), 100)
+    start = (page - 1) * size
+    chunk = df.iloc[start : start + size].copy()
+    for c in chunk.columns:
+        if str(chunk[c].dtype).startswith("datetime"):
+            chunk[c] = chunk[c].astype(str)
+    chunk = chunk.where(pd.notna(chunk), None)
+    return {
+        "key": key,
+        "title": meta["title"],
+        "kind": "table",
+        "columns": list(chunk.columns),
+        "rows": chunk.to_dict(orient="records"),
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": max((total + size - 1) // size, 1),
+    }
 
 
 def build_briefing(data: ShopData) -> dict[str, Any]:

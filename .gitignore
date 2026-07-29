@@ -9,3 +9,6 @@ dist/
 build/
 .idea/
 .vscode/
+# 运行时本地数据：用户库 / 签名密钥
+data/users.db*
+data/.secret_key

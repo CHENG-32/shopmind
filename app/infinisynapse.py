@@ -138,8 +138,20 @@ class InfiniSynapseClient:
         files: list[Path] | None = None,
         timeout_sec: int = 180,
         on_event: Callable[[str, dict[str, Any]], None] | None = None,
+        on_stage: Callable[[str, dict[str, Any]], None] | None = None,
     ) -> dict[str, Any]:
-        """完整分析：准备资源 → SSE → newTask → 上传文件 → 收集 completion。"""
+        """完整分析：准备资源 → SSE → newTask → 上传文件 → 收集 completion。
+
+        on_stage(stage, info) 用于向前端推送进度：
+        prepare → connected → task_created → uploading → uploaded → answer_chunk → …
+        """
+        def stage(name: str, **info: Any) -> None:
+            if on_stage:
+                try:
+                    on_stage(name, info)
+                except Exception:
+                    pass
+
         if not self.api_key:
             return {
                 "ok": False,
@@ -148,7 +160,12 @@ class InfiniSynapseClient:
                 "task_id": None,
             }
 
+        stage("prepare", text="正在启用 InfiniSynapse 数据源与知识库…")
         context = self.prepare_context()
+        stage(
+            "context_ready",
+            text=f"已启用 {len(context['databases'])} 个数据源 / {len(context['rags'])} 个知识库",
+        )
         conn_id = str(uuid.uuid4())
         task_id: str | None = None
         answer_parts: list[str] = []
@@ -163,12 +180,14 @@ class InfiniSynapseClient:
         try:
             with self._client(timeout=timeout_sec + 30) as c:
                 # 1) 打开 SSE
+                stage("connecting", text="正在建立 InfiniSynapse SSE 事件通道…")
                 with c.stream(
                     "GET",
                     "/ai/events",
                     params={"connId": conn_id},
                     headers={**self._headers, "Accept": "text/event-stream"},
                 ) as sse:
+                    stage("connected", text="事件通道已连接，正在创建分析任务…", conn_id=conn_id)
                     # 2) 发送 newTask
                     body = {
                         "type": "newTask",
@@ -236,13 +255,24 @@ class InfiniSynapseClient:
                                 pass
 
                         if isinstance(payload, dict) and payload.get("taskId"):
+                            if not task_id:
+                                stage(
+                                    "task_created",
+                                    text="分析任务已创建，正在上传经营数据…",
+                                    task_id=str(payload["taskId"]),
+                                )
                             task_id = str(payload["taskId"])
 
                         # 拿到 taskId 后立刻上传经营数据
                         if task_id and files and not uploaded:
                             uploaded = True
+                            stage("uploading", text=f"正在上传 {len(files)} 份经营文件…", task_id=task_id)
                             try:
                                 self.upload_task_files(task_id, files)
+                                stage(
+                                    "uploaded",
+                                    text="订单 / 库存 / 日报 / 知识库已送达 Agent，开始深度分析…",
+                                )
                             except Exception as e:
                                 logger.exception("upload failed")
                                 error = f"文件上传失败: {e}"
@@ -255,6 +285,7 @@ class InfiniSynapseClient:
                             if say == "completion_result" and text:
                                 if partial:
                                     answer_parts.append(text)
+                                    stage("answer_chunk", text=text, partial=True)
                                 else:
                                     final_answer = text
                             # 部分场景最终文本在 say=text 且较长
@@ -330,6 +361,62 @@ def _safe_json(r: httpx.Response) -> Any:
         return r.json()
     except Exception:
         return r.text[:300]
+
+
+def stream_analysis(
+    client: "InfiniSynapseClient",
+    prompt: str,
+    files: list[Path] | None = None,
+    timeout_sec: int = 180,
+):
+    """把 InfiniSynapse 的阻塞式分析转成事件流（dict 生成器）。
+
+    事件类型：stage / answer_chunk / done。供 FastAPI SSE 端点消费。
+    """
+    import queue
+    import threading
+
+    q: "queue.Queue[tuple[str, dict[str, Any]]]" = queue.Queue()
+
+    def on_stage(name: str, info: dict[str, Any]) -> None:
+        q.put(("stage", {"stage": name, **info}))
+
+    def on_event(name: str, payload: dict[str, Any]) -> None:
+        msg = payload.get("message") if isinstance(payload, dict) else None
+        if isinstance(msg, dict):
+            ask = msg.get("ask")
+            if ask and ask != "upload_file_to_sandbox":
+                q.put(("stage", {"stage": "agent_thinking", "text": f"Agent 请求输入：{ask}"}))
+
+    def worker() -> None:
+        try:
+            result = client.run_analysis(
+                prompt,
+                files=files or [],
+                timeout_sec=timeout_sec,
+                on_event=on_event,
+                on_stage=on_stage,
+            )
+        except Exception as e:  # pragma: no cover - 防御
+            result = {"ok": False, "answer": "", "error": str(e), "task_id": None}
+        q.put(("done", result))
+
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+    deadline = time.time() + timeout_sec + 45
+    while time.time() < deadline:
+        try:
+            kind, payload = q.get(timeout=2.0)
+        except queue.Empty:
+            if not t.is_alive():
+                break
+            q_put_heartbeat = {"stage": "heartbeat", "text": "分析进行中…"}
+            yield ("stage", q_put_heartbeat)
+            continue
+        yield (kind, payload)
+        if kind == "done":
+            break
 
 
 def build_shopmind_prompt(user_question: str, local_brief: str) -> str:
